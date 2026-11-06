@@ -52,11 +52,13 @@ a 'ls -la /dev/block/by-name/' by-name.txt
 a 'cat /sys/class/backlight/*/max_brightness /sys/class/backlight/*/brightness' backlight.txt
 a 'cat /sys/class/power_supply/battery/capacity' battery.txt
 a 'cat /sys/class/drm/card0-*/modes 2>/dev/null; wm size 2>/dev/null' display.txt
+a 'for z in /sys/class/thermal/thermal_zone*; do echo "${z##*/} $(cat $z/type)"; done' thermal.txt
 
 echo
 echo "================ summary ================"
+printf '  %-22s %s\n' "cpu temp zone3:" "$(grep -E '^thermal_zone3 ' "$OUT/thermal.txt" || echo missing) (tree expects cpuss-0)"
 grep -E '^\[init\.svc\.' "$OUT/getprop.txt" | sed 's/^/  /'
-printf '  %-22s %s\n' "touch input:" "$(grep -iE '^N: Name=.*(touch|tcm|syna|s3910)' "$OUT/input-devices.txt" | head -1 || echo none)"
+printf '  %-22s %s\n' "touch input:" "$(grep -iE '^N: Name=.*(touchpanel|touch|tcm|syna|s3910)' "$OUT/input-devices.txt" | head -1 || echo none)"
 printf '  %-22s %s\n' "modules loaded prop:" "$(grep -F '[twrp.modules.loaded]' "$OUT/getprop.txt" || echo unset)"
 printf '  %-22s %s\n' "crypto state:" "$(grep -E '^\[ro\.crypto\.(state|type)\]' "$OUT/getprop.txt" | tr '\n' ' ')"
 printf '  %-22s %s\n' "decrypted:" "$(grep -F '[twrp.all.users.decrypted]' "$OUT/getprop.txt" || echo unset)"

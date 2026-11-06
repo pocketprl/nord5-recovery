@@ -5,12 +5,13 @@
 # the same ratio AERA uses for the OnePlus 12).
 AERA_UI_ADAPTIVE_RESOLUTION := true
 AERA_SCREEN_H := 2376
-# VERIFY: status bar height and indents depend on where the punch-hole sits.
-# These start from the 1220px-wide peridot values and get tuned on hardware.
-AERA_STATUS_H := 115
+# Status bar from the firmware cutout spec (dumpsys window): centred punch-hole,
+# 76px wide, 141px tall at 1272px. STATUS_H/INDENT use AERA's 1440-wide space:
+# 141 * 1440/1272 = 160. Indents left at AERA's default.
+AERA_STATUS_H := 160
 AERA_HIDE_NOTCH := 1
-AERA_STATUS_INDENT_LEFT := 56
-AERA_STATUS_INDENT_RIGHT := 48
+AERA_STATUS_INDENT_LEFT := 54
+AERA_STATUS_INDENT_RIGHT := 54
 AERA_OPTIONS_LIST_NUM := 8
 AERA_USE_GREEN_LED := 0
 

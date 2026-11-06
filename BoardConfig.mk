@@ -133,7 +133,7 @@ BOOT_SECURITY_PATCH := $(PLATFORM_SECURITY_PATCH)
 TARGET_SYSTEM_PROP += $(DEVICE_PATH)/system.prop
 TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 
-# Display: 1272x2800 @120Hz [LOS] device.mk / displayconfig.xml
+# Display: 1272x2800, panel modes 60/90/120/144 Hz (dumpsys display on CPH2709)
 AERA_THEME := portrait_hdpi
 AERA_FRAMERATE := 120
 AERA_BRIGHTNESS_PATH := "/sys/devices/platform/soc/ae00000.qcom,mdss_mdp/backlight/panel0-backlight/brightness" # [TW]
@@ -143,14 +143,18 @@ AERA_NO_SCREEN_BLANK := true
 AERA_SCREEN_BLANK_ON_BOOT := true
 AERA_INPUT_BLACKLIST := "hbtp_vm"
 
-# Status bar [TW]
-AERA_CUSTOM_CPU_TEMP_PATH := "/sys/devices/virtual/thermal/thermal_zone45/temp"
+# Status bar. [TW] used thermal_zone45, which is "shell_front" (skin temp) on
+# CPH2709. zone3 is "cpuss-0" (tsens, registered early so the index should hold
+# in recovery). VERIFY: 04-test-image.sh dumps zone types from recovery.
+AERA_CUSTOM_CPU_TEMP_PATH := "/sys/class/thermal/thermal_zone3/temp"
 AERA_QCOM_ATS_OFFSET := 1666528204500
 
-# Kernel modules [TW] (touch: Synaptics S3910 on-cell, Tianma panel, prjname 24881)
-# Phase 1 loads only what the official TWRP build loads. Wi-Fi/audio/GPU modules
-# come in phase 2 once the base recovery is confirmed on hardware.
-AERA_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko rproc_qcom_common.ko q6_dlkm.ko qcom_q6v5.ko qcom_q6v5_pas.ko qcom_esoc.ko qcom_sysmon.ko qcom-hv-haptics.ko goodix_ts.ko haptic_feedback.ko oplus_chg_v2.ko oplus_bsp_tp_custom.ko oplus_bsp_tp_common.ko oplus_bsp_tp_notify.ko oplus_bsp_tp_tcm_oncell.ko oplus_bsp_tp_tcm_S3910.ko oplus_bsp_tp_syna_common.ko oplus_bsp_tp_gt9966.ko oplus_bsp_tp_gt9916.ko oplus_bsp_tp_novatek_common.ko oplus_bsp_tp_nt36532_noflash.ko"
+# Kernel modules: [TW] base set, corrected against /proc/modules on CPH2709
+# OxygenOS 16.0.5.1301 (EX01). Touch on 24881 is the "touchpanel" device on the
+# HBP stack (oplus_hbp_core + hbp_syna_s3910 + synaptics_tcm2). Dropped from [TW]:
+# qcom_esoc.ko and oplus_bsp_tp_tcm_oncell.ko (not shipped on this firmware).
+# Panel-vendor alternates stay listed; modules that don't match just fail to probe.
+AERA_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko rproc_qcom_common.ko q6_dlkm.ko qcom_q6v5.ko qcom_q6v5_pas.ko qcom_sysmon.ko qcom-hv-haptics.ko haptic_feedback.ko oplus_chg_v2.ko oplus_bsp_tp_custom.ko oplus_bsp_tp_common.ko oplus_bsp_tp_notify.ko oplus_hbp_core.ko oplus_bsp_synaptics_tcm2.ko oplus_bsp_tp_syna_common.ko oplus_bsp_tp_hbp_syna_s3910.ko oplus_bsp_tp_tcm_S3910.ko oplus_bsp_tp_tcm_S3908.ko goodix_ts.ko oplus_bsp_tp_hbp_goodix_gt99x6.ko oplus_bsp_tp_gt9966.ko oplus_bsp_tp_gt9916.ko oplus_bsp_tp_novatek_common.ko oplus_bsp_tp_nt36532_noflash.ko"
 AERA_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
 
 # Haptics [TW]
