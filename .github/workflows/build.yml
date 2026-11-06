@@ -136,7 +136,7 @@ jobs:
       - name: Build recovery image
         # Backstop only; the soft timeout below fires first and leaves diagnostics.
         # (A job cancelled or killed mid-step can lose its whole log.)
-        timeout-minutes: 170
+        timeout-minutes: 290
         working-directory: /home/runner/aera
         run: |
           export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="$PWD/.ccache"
@@ -152,10 +152,10 @@ jobs:
           hb=$!
           rc=0
           # m/mka are shell functions timeout(1) cannot run; call what m wraps
-          timeout --signal=INT --kill-after=2m 150m build/soong/soong_ui.bash --make-mode adbd recoveryimage || rc=$?
+          timeout --signal=INT --kill-after=2m 270m build/soong/soong_ui.bash --make-mode adbd recoveryimage || rc=$?
           kill $hb 2>/dev/null || true
           if [ $rc -ne 0 ]; then
-            [ $rc -eq 124 ] && echo "[!!] build hit the 150 min soft timeout" || echo "[!!] build failed (exit $rc)"
+            [ $rc -eq 124 ] && echo "[!!] build hit the 270 min soft timeout (ccache is still saved; rerun to continue)" || echo "[!!] build failed (exit $rc)"
             echo "── memory ──"; free -h
             echo "── top processes by rss ──"; ps -eo rss=,etime=,comm= --sort=-rss | head -8 | awk '{printf "  %6.1fG  %10s  %s\n", $1/1048576, $2, $3}'
             echo "── OOM killer ──"; sudo dmesg 2>/dev/null | grep -iE 'out of memory|killed process' | tail -5 || echo "  none"
