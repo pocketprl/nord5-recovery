@@ -65,6 +65,26 @@ jobs:
           df -h /home/runner/aera
           free -h
 
+      # soong_build's Go heap outgrows the runner's 16 GB. Disk swap alone stalls
+      # the whole VM (runs 5 and 6: silent for 40+ min, even the heartbeat froze).
+      # Compressed swap in RAM is what the TWRP-16 builds that finish on these
+      # same runners use (adontoo/twrp_device_oplus_sm86xx); disk swap stays as
+      # a lower-priority fallback.
+      - name: Setup zram swap
+        run: |
+          sudo modprobe zram 2>/dev/null || {
+            sudo apt-get install -y "linux-modules-extra-$(uname -r)"
+            sudo modprobe zram
+          }
+          size_k=$(( $(awk '/^MemTotal/{print $2}' /proc/meminfo) * 9 / 10 ))
+          dev=$(sudo zramctl --find --size "${size_k}K" --algorithm lz4)
+          sudo mkswap "$dev" >/dev/null
+          sudo swapon --priority 1000 "$dev"
+          # The kernel should prefer compressing over dropping file cache
+          sudo sysctl -w vm.swappiness=180 vm.page-cluster=0
+          swapon --show
+          free -h
+
       # ~17 min normally. Not cacheable: ~30 GB vs the 10 GB per-repo cache limit.
       # A stuck sync (googlesource throttling shared runner IPs) fails here
       # instead of running into the 6 h job limit.
