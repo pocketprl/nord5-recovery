@@ -123,7 +123,18 @@ jobs:
           ccache -z
           source build/envsetup.sh
           lunch twrp_${DEVICE}-bp2a-${{ inputs.BUILD_VARIANT }}
-          mka adbd recoveryimage
+          # soong_build/kati analysis prints nothing for 10-25 min and can use
+          # >10 GB; show memory, swap, load and the biggest build process
+          (start=$(date +%s); while sleep 120; do
+             top=$(ps -eo rss=,comm= --sort=-rss | head -1 | awk '{printf "%s %.1fG", $2, $1/1048576}')
+             echo "[*] $(( ($(date +%s)-start)/60 )) min | mem $(free -g | awk '/^Mem/{print $3"/"$2"G"}') | swap $(free -g | awk '/^Swap/{print $3"/"$2"G"}') | load $(cut -d' ' -f1 /proc/loadavg) | top: $top"
+           done) &
+          hb=$!
+          rc=0
+          mka adbd recoveryimage || rc=$?
+          kill $hb 2>/dev/null || true
+          [ $rc -eq 0 ] || sudo dmesg 2>/dev/null | grep -iE 'out of memory|killed process' | tail -3 || true
+          exit $rc
 
       - name: ccache stats
         id: ccache_stats
