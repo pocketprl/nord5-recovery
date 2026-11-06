@@ -18,6 +18,12 @@ gv() { fastboot getvar "$1" 2>&1 | sed -nE "s/^$1: ?//p" | head -1; }
 cur="$(gv current-slot)"; cur="${cur#_}"
 case "$WHICH" in current) slots="$cur";; a|b) slots="$WHICH";; both) slots="a b";; *) echo "bad slot"; exit 1;; esac
 
+for s in $slots; do
+  if [ "$(gv slot-unbootable:$s)" = "yes" ]; then
+    echo "Slot $s is marked unbootable (normal after an OTA). Refusing to flash its recovery."; exit 1
+  fi
+done
+
 img_sz=$(stat -c %s "$IMG")
 for s in $slots; do
   part_sz=$(printf '%d' "$(gv partition-size:recovery_$s)" 2>/dev/null || echo 0)

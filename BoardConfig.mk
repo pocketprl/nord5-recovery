@@ -79,9 +79,9 @@ BOARD_INIT_BOOT_IMAGE_PARTITION_SIZE := 8388608
 BOARD_RECOVERYIMAGE_PARTITION_SIZE := 104857600
 BOARD_VENDOR_BOOTIMAGE_PARTITION_SIZE := 201326592
 
-# Dynamic partitions
-# VERIFY: [LOS] lexus says 13883146240. [TW] says 9126805504, but its group size
-# (16936005632) is bigger than that, so it looks copy-pasted from peridot.
+# Dynamic partitions. Confirmed by `fastboot getvar` on CPH2709: super is
+# 13883146240 ([LOS] was right, [TW]'s 9126805504 was copied from peridot).
+# Every fixed partition size above matched too.
 BOARD_SUPER_PARTITION_SIZE := 13883146240
 BOARD_SUPER_PARTITION_GROUPS := qti_dynamic_partitions
 BOARD_QTI_DYNAMIC_PARTITIONS_SIZE := 13878951936 # BOARD_SUPER_PARTITION_SIZE - 4MiB
