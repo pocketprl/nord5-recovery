@@ -198,7 +198,8 @@ RECOVERY_BINARY_SOURCE_FILES += \
     $(TARGET_OUT_EXECUTABLES)/debuggerd \
     $(TARGET_OUT_EXECUTABLES)/strace
 
-# Libraries the [TW] build pulls into the ramdisk for decryption/display
+# System libraries the ramdisk needs built in. [TW] set for display/debug, plus
+# libjsoncpp (ssgtzd, vibrator) and common-V2-ndk (qseecom AIDL) for the A16 stack
 TARGET_RECOVERY_DEVICE_MODULES += \
     android.hidl.allocator@1.0 \
     android.hidl.memory@1.0 \
@@ -209,8 +210,12 @@ TARGET_RECOVERY_DEVICE_MODULES += \
     libnetutils \
     vendor.display.config@1.0 \
     vendor.display.config@2.0 \
-    libdebuggerd_client
+    libdebuggerd_client \
+    libjsoncpp \
+    android.hardware.common-V2-ndk
 RECOVERY_LIBRARY_SOURCE_FILES += \
+    $(TARGET_OUT_SHARED_LIBRARIES)/libjsoncpp.so \
+    $(TARGET_OUT_SHARED_LIBRARIES)/android.hardware.common-V2-ndk.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hidl.allocator@1.0.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hidl.memory@1.0.so \
     $(TARGET_OUT_SHARED_LIBRARIES)/android.hidl.memory.token@1.0.so \

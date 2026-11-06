@@ -25,10 +25,8 @@ PRODUCT_PACKAGES += \
     fastbootd \
     android.hardware.fastboot@1.1-impl-mock
 
-# Qualcomm decryption (device/qcom/twrp-common) [TW]
-PRODUCT_PACKAGES += \
-    qcom_decrypt \
-    qcom_decrypt_fbe
+# Decryption uses the phone's own Android 16 keymint/gatekeeper/qseecom
+# services (recovery/root/vendor), not twrp-common's qcom_decrypt scripts.
 
 # f2fs tools [TW]
 PRODUCT_PACKAGES += \

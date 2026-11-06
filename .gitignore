@@ -1,3 +1,5 @@
 lexus-device-logs/
 lexus-device-backup/
 *.img
+__pycache__/
+*.pyc

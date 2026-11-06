@@ -25,7 +25,9 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-import /init.recovery.qcom_decrypt.rc
+# Android 16 security stack from CPH2709 OxygenOS 16.0.5.1301 (EX01). Service
+# definitions live in vendor/etc/init (the phone's own, with recovery labels);
+# start order follows AERA's OnePlus 12 tree, which runs the same stack.
 
 service variant-script /system/bin/variant-script.sh
     user root
@@ -42,13 +44,19 @@ service overrideprops /system/bin/overrideprops.sh
     seclabel u:r:recovery:s0
 
 on init
-    # AIDL boot control; the upstream TWRP tree started a nonexistent HIDL service
-    start boot-qti
+    setprop prepdecrypt.setpatch true
+    start vendor.boot-qti
+    start vendor.gatekeeper_default
 
 on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
     symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
     write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
+    chmod 0660 /dev/qseecom
+    chown system drmrpc /dev/qseecom
+    chmod 0664 /dev/ion
+    chown system system /dev/ion
+    install_keyring
 
 on boot
     setprop sys.usb.config adb
@@ -56,21 +64,24 @@ on boot
     start overrideprops
 
 on property:twrp.modules.loaded=true
-    # Mount persist
+    # Mount persist read-only: the TEE services read it, nothing here writes it
     mkdir /mnt/vendor/persist
     mount ext4 /dev/block/bootdevice/by-name/persist /mnt/vendor/persist ro
-    # Mount firmware
+    # Firmware for the ADSP (PMIC/battery) boot
     mkdir /firmware
     mount vfat /dev/block/bootdevice/by-name/modem${ro.boot.slot_suffix} /firmware ro
-    # Load ADSP firmware for PMIC
     wait /sys/kernel/boot_adsp/boot
     write /sys/kernel/boot_adsp/boot 1
     wait /sys/class/power_supply/battery
-    # health-default is the only health service defined in this ramdisk
-    start health-default
+    start vendor.health-default
     start vendor.oplus.vibrator
     umount /firmware
+    # Real security patch levels from the stock images, then crypto.ready=1
+    start override-spl
+
+on property:servicemanager.ready=true
+    start vendor.ssgtzd
+    start vendor.qwesd
 
 on property:twrp.all.users.decrypted=true
     umount /mnt/vendor/persist
-

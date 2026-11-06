@@ -24,7 +24,15 @@ Nothing here is guessed. Each value traces back to one of these:
 
 Values marked `VERIFY` get checked on hardware by `tools/01-first-contact.sh`.
 
+The decryption/security stack (keymint, gatekeeper, qseecomd, qwesd, ssgtzd, boot, health,
+vibrator) and its 60-library closure come from **CPH2709 OxygenOS 16.0.5.1301 (EX01)** itself.
+Readable files were pulled over adb from a locked phone and hash-verified. The ones SELinux hides
+from the shell (`tools/selinux-locked-files.txt`) were cut out of the matching OTA by
+`tools/erofs_lazy.py` and checked against files with known hashes. Service init and start order
+follow AERA's OnePlus 12 tree, which runs the same stack.
+
 Fixed relative to the upstream TWRP tree:
+- Its blobs are Android 15; 61 of 117 differed from OxygenOS 16 and the gatekeeper it starts no longer exists
 - `init` started a nonexistent `boot-hal-1-2` while the real AIDL `boot-qti` was commented out
 - `init` started a nonexistent `health-hal-2-1` instead of the `health-default` service that actually exists
 - `variant-script.sh` had a stray `;;` after `esac`, a syntax error, so it never set the model props
@@ -62,6 +70,17 @@ before the long build.
 | 3 | TWRP | `03-blob-audit.sh`: compares ramdisk blobs with the phone's firmware; `PULL=1` updates them | no |
 | 4 | bootloader | `04-test-image.sh <img>`: flashes **only** `recovery_<slot>`, boots it, collects logs | recovery only |
 | loop | - | `05-repack.sh <img>`: overlays `recovery/root` changes into an image without a rebuild | no |
+
+### Getting blobs without unlocking
+
+```bash
+# Partition table of a remote OTA (reads ~350 KB):
+tools/ota_peek.py '<signed OTA url>'
+# Files from an erofs partition, fetching only the 2 MB chunks they live in:
+tools/erofs_lazy.py '<signed OTA url>' vendor ./ota-cache /bin/qseecomd /firmware/gen71100_zap.mbn
+```
+Needs `dump.erofs` (erofs-utils) and `strace`. Works for full A/B OTAs whose payload is stored
+uncompressed in the zip. OnePlus CDN links are signed and expire within about an hour.
 
 Logs and backups go to `./lexus-device-logs` and `./lexus-device-backup` (both gitignored, since
 backups contain IMEI/calibration data). `05-repack.sh` needs `magiskboot` on `PATH` or `MAGISKBOOT=`;

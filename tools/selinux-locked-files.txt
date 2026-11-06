@@ -1,0 +1,22 @@
+# Files the shell user cannot read on stock OxygenOS 16 (SELinux), confirmed on
+# CPH2709 16.0.5.1301(EX01). No unlock needed: extract them from the matching
+# OTA with tools/erofs_lazy.py (~110 MB of chunks instead of ~2 GB of vendor+odm).
+# Paths below are as mounted; pass them to erofs_lazy.py relative to the
+# partition root (/vendor/bin/qseecomd -> vendor /bin/qseecomd).
+#
+# Android 16 decryption/security stack (replaces the [TW] Android 15 set)
+/vendor/bin/hw/android.hardware.security.keymint-service-qti
+/vendor/bin/hw/android.hardware.gatekeeper-service-qti
+/vendor/bin/qseecomd
+/vendor/bin/qwesd
+/vendor/bin/ssgtzd
+/vendor/bin/hw/vendor.qti.hardware.qseecom@1.0-service
+# Boot control / battery / haptics
+/vendor/bin/hw/android.hardware.boot-service.qti
+/vendor/bin/hw/android.hardware.health-service.qti
+/odm/bin/hw/vendor.oplus.hardware.vibrator-service
+# Adreno 735 GPU acceleration
+/vendor/bin/hw/vendor.qti.hardware.display.allocator-service
+/vendor/firmware/gen71100_gmu.bin
+/vendor/firmware/gen71100_sqe.fw
+/vendor/firmware/gen71100_zap.mbn
