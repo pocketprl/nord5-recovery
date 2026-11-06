@@ -13,7 +13,22 @@ on:
         default: "eng"
 
 jobs:
+  # About a minute; catches config mistakes before the ~18 minute sync
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: device-tree
+      - name: Fetch AERA recovery sources (shallow)
+        run: |
+          git clone --depth 1 -b ${{ inputs.MANIFEST_BRANCH }} https://github.com/AERA-Recovery/android_bootable_recovery aera-recovery
+          git clone --depth 1 -b ${{ inputs.MANIFEST_BRANCH }} https://github.com/AERA-Recovery/android_vendor_recovery aera-vendor
+      - name: Lint device tree
+        run: device-tree/tools/aera-lint.sh aera-recovery aera-vendor device-tree
+
   build:
+    needs: lint
     runs-on: ubuntu-latest
     permissions:
       contents: write

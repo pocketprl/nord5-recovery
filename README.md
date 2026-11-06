@@ -49,6 +49,10 @@ lunch twrp_lexus-bp2a-eng
 mka adbd recoveryimage
 ```
 
+Before pushing, `tools/aera-lint.sh <bootable/recovery> <vendor/recovery>` checks the tree against AERA's
+sources (unknown flags, combinations AERA rejects, missing filesystem types). CI runs the same check
+before the long build.
+
 ## Bring-up runbook (`tools/`)
 
 | Step | Phone state | Script | Writes to phone? |
