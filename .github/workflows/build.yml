@@ -61,12 +61,17 @@ jobs:
           df -h /home/runner/aera
           free -h
 
+      # ~17 min normally. Not cacheable: ~30 GB vs the 10 GB per-repo cache limit.
+      # A stuck sync (googlesource throttling shared runner IPs) fails here
+      # instead of running into the 6 h job limit.
       - name: Sync AERA source (shallow)
+        timeout-minutes: 45
         working-directory: /home/runner/aera
         run: |
           repo init -u https://github.com/AERA-Recovery/android_manifest.git \
             -b ${{ inputs.MANIFEST_BRANCH }} --depth=1 --no-clone-bundle
-          repo sync -c --no-tags --no-clone-bundle --optimized-fetch --force-sync -j"$(nproc)"
+          time repo sync -c --no-tags --no-clone-bundle --optimized-fetch --force-sync \
+            --retry-fetches=5 -j"$(nproc)"
           du -sh .
 
       - name: Check out device tree
@@ -80,8 +85,10 @@ jobs:
           mv device-tree "/home/runner/aera/$DEVICE_PATH"
           rm -rf "/home/runner/aera/$DEVICE_PATH/.git"
 
+      # Restore and save are separate so a failed build still saves its compile
+      # cache (actions/cache only saves when the whole job succeeds).
       - name: Restore ccache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: /home/runner/aera/.ccache
           key: ccache-lexus-${{ github.run_id }}
@@ -91,11 +98,33 @@ jobs:
         working-directory: /home/runner/aera
         run: |
           export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="$PWD/.ccache"
-          ccache -M 5G
+          export CCACHE_COMPRESS=1 CCACHE_COMPRESSLEVEL=6
+          # 4 GB keeps two cache generations inside the 10 GB repo limit
+          ccache -M 4G
+          ccache -z
           source build/envsetup.sh
           lunch twrp_${DEVICE}-bp2a-${{ inputs.BUILD_VARIANT }}
           mka adbd recoveryimage
-          ccache -s
+
+      - name: ccache stats
+        id: ccache_stats
+        if: always()
+        working-directory: /home/runner/aera
+        run: |
+          # hashFiles() only sees the workspace, so record emptiness here instead
+          if [ -n "$(find .ccache -type f -print -quit 2>/dev/null)" ]; then
+            CCACHE_DIR="$PWD/.ccache" ccache -s
+            echo "has_data=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no ccache data (build never reached compilation)"
+          fi
+
+      - name: Save ccache
+        if: always() && steps.ccache_stats.outputs.has_data == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /home/runner/aera/.ccache
+          key: ccache-lexus-${{ github.run_id }}
 
       - name: Collect artifacts
         id: art
