@@ -146,8 +146,14 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 AERA_THEME := portrait_hdpi
 AERA_FRAMERATE := 120
 AERA_BRIGHTNESS_PATH := "/sys/devices/platform/soc/ae00000.qcom,mdss_mdp/backlight/panel0-backlight/brightness" # [TW]
-# AERA_MAX_BRIGHTNESS deliberately unset: AERA then reads max_brightness next to
-# the brightness node at runtime (bootable/recovery/data.cpp). No guessing.
+# Brightness from the panel node in stock dtbo (16.0.5.1301 EX01): sysfs scale
+# qcom,mdss-brightness-max-level = 0xfff (4095); oplus normal (non-HBM) max
+# 0xdbb (3515); oplus default 0x666 (1638). Capped at the normal max so recovery
+# never drives the OLED into high-brightness mode without the system's thermal
+# control. Must be a number: vendor/twrp's twrp_defaults emits
+# -DTW_MAX_BRIGHTNESS=%s even when unset, and minuitwrp then fails to compile.
+AERA_MAX_BRIGHTNESS := 3515
+AERA_DEFAULT_BRIGHTNESS := 1638
 AERA_NO_SCREEN_BLANK := true
 AERA_SCREEN_BLANK_ON_BOOT := true
 AERA_INPUT_BLACKLIST := "hbtp_vm"

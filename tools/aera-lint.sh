@@ -4,6 +4,7 @@
 #  - AERA_* flags that AERA never reads (typos, flags copied from other projects)
 #  - flag combinations aera_build.mk rejects with $(error)
 #  - TARGET_COPY_OUT_* without the filesystem type build/make requires
+#  - with VENDOR_TWRP=<vendor/twrp>: value macros that would compile empty
 # Exits 1 if anything is reported.
 rec="$1"; ven="$2"; tree="${3:-$(cd "$(dirname "$0")/.." && pwd)}"
 cfg="$rec/aera_config.mk"
@@ -32,6 +33,27 @@ s="$(val BUILD_STATUS)"; [ -n "$s" ] && ! echo " Official Unofficial " | grep -q
 for p in $(grep -rhoE '^\s*TARGET_COPY_OUT_[A-Z_]+\s*:=\s*[a-z_]+' "$tree" --include=*.mk | sed -E 's/^\s*TARGET_COPY_OUT_([A-Z_]+).*/\1/' | sort -u); do
   grep -rqE "^\s*BOARD_${p}IMAGE_FILE_SYSTEM_TYPE\s*:=" "$tree" --include=*.mk || echo "MISSING: BOARD_${p}IMAGE_FILE_SYSTEM_TYPE (needed for TARGET_COPY_OUT_$p)"
 done
+
+# With VENDOR_TWRP=<vendor/twrp dir>: value-type soong config variables
+# ("-DFOO=%s" in twrp_defaults) that have no ?= default and aren't set by the tree
+# compile as an empty macro, e.g. TW_MAX_BRIGHTNESS -> "TW_MAX_BRIGHTNESS/2" errors.
+if [ -n "${VENDOR_TWRP:-}" ]; then
+  python3 -I - "$VENDOR_TWRP/build/soong/Android.bp" "$VENDOR_TWRP/config/BoardConfigSoong.mk" "$tree" <<'PY'
+import os, re, sys
+bp, mk = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+txt = ''
+for d, _, fs in os.walk(sys.argv[3]):
+    if '.git' in d: continue
+    for f in fs:
+        if f.endswith(('.mk', '.sh')): txt += open(os.path.join(d, f), errors='ignore').read()
+for v, flags in re.findall(r'(\w+):\s*\{\s*cflags:\s*\[([^\]]*)\]', bp):
+    if '%s' not in flags: continue
+    V = v.upper()
+    if re.search(r'^' + V + r'\s*\?=', mk, re.M): continue
+    if any(re.search(r'^\s*(export\s+)?' + n + r'\s*:?=', txt, re.M) for n in (V, 'AERA_' + V.removeprefix('TW_'))): continue
+    print(f'EMPTY MACRO: {V} has no default and is not set; it compiles as an empty define (set AERA_{V.removeprefix("TW_")})')
+PY
+fi
 }
 out="$(report)"
 [ -z "$out" ] && { echo "aera-lint: OK"; exit 0; }
