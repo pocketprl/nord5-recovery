@@ -17,7 +17,7 @@ mbs() { echo "$1/1048576" | bc -l | xargs printf '%.1f mb'; }
 
 act "reading partition table (blockdev --getsize64 over /dev/block/by-name)"
 adb shell 'for p in /dev/block/by-name/*; do n=${p##*/}; s=$(blockdev --getsize64 $p 2>/dev/null); echo "$n $s"; done' \
-  | tr -d '\r' | sort > /tmp/lexus-parts.txt
+  | tr -d '\r' | LC_ALL=C sort > /tmp/lexus-parts.txt
 
 total=0; : > /tmp/lexus-plan.txt
 while read -r n s; do
