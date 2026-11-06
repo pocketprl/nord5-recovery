@@ -1,0 +1,16 @@
+# ADB: open during bring-up so a broken UI still gives a shell
+ro.adb.secure=0
+ro.boot.dynamic_partitions=true
+
+# Battery [TW]
+ro.charger.enable_suspend=1
+
+# OTG
+persist.sys.isUsbOtgEnabled=true
+
+# FUSE passthrough
+persist.sys.fuse.passthrough.enable=true
+
+# Virtual A/B
+ro.virtual_ab.compression.threads=true
+ro.virtual_ab.batch_writes=true

@@ -1,0 +1,66 @@
+# AERA Recovery device tree for OnePlus Nord 5 (lexus)
+
+Unofficial, **alpha, untested on hardware**. Targets CPH2709 (global/EU, `prjname 24881`)
+and should also cover CPH2707.
+
+| | |
+|---|---|
+| SoC | Snapdragon 8s Gen 3 (SM8635 "cliffs", `pineapple` platform) |
+| Display | 1272x2800, 120 Hz |
+| Touch | Synaptics S3910 on-cell (Tianma) |
+| Wi-Fi | qca6750 (same as POCO F6 / peridot) |
+| GPU | Adreno 735 (gen7_11_0) |
+| Partitions | A/B + dedicated `recovery_[ab]`, virtual A/B, FBEv2 + metadata encryption |
+
+## Where everything comes from
+
+Nothing here is guessed. Each value traces back to one of these:
+
+- [TeamWin/android_device_oneplus_lexus](https://github.com/TeamWin/android_device_oneplus_lexus): official TWRP, which targets CPH2709.
+  The ramdisk blobs (decryption stack, haptics, touch firmware), module list, fstab, brightness path and CPU temp zone all come from here.
+- [LineageOS/android_device_oneplus_lexus](https://github.com/LineageOS/android_device_oneplus_lexus) + sm8650-common: partition sizes, screen size,
+  Wi-Fi chip, GPU generation, A/B list, encryption options.
+- AERA `waffle` (OnePlus 12) and `peridot` (POCO F6, same SoC): AERA flag layout and OxygenOS `my_*` partitions.
+
+Values marked `VERIFY` get checked on hardware by `tools/01-first-contact.sh`.
+
+Fixed relative to the upstream TWRP tree:
+- `init` started a nonexistent `boot-hal-1-2` while the real AIDL `boot-qti` was commented out
+- `init` started a nonexistent `health-hal-2-1` instead of the `health-default` service that actually exists
+- `variant-script.sh` had a stray `;;` after `esac`, a syntax error, so it never set the model props
+
+## Phases
+
+1. **Base** (this tree): display, touch, ADB/MTP/fastbootd, FBE decryption, haptics, flash/backup.
+   Feature parity with official TWRP, inside AERA.
+2. Wi-Fi (`qca6750` + `icnss2`, following peridot), Adreno 735 GPU acceleration, audio.
+
+## Build
+
+CI: run the **Build AERA (lexus)** workflow (Actions tab -> Run workflow). The image ends up in a prerelease.
+
+Local:
+```bash
+repo init -u https://github.com/AERA-Recovery/android_manifest.git -b aera-16.0 --depth=1
+repo sync -c --no-tags --no-clone-bundle --optimized-fetch -j8
+git clone <this repo> device/oneplus/lexus
+source build/envsetup.sh
+lunch twrp_lexus-bp2a-eng
+mka adbd recoveryimage
+```
+
+## Bring-up runbook (`tools/`)
+
+| Step | Phone state | Script | Writes to phone? |
+|---|---|---|---|
+| 1 | bootloader | `01-first-contact.sh`: getvar dump, checks partition sizes against the tree | no |
+| 2 | official TWRP flashed, booted | `02-backup.sh`: sizes first, then persist/EFS/modem/oplus* and every small partition to the PC | no |
+| 3 | TWRP | `03-blob-audit.sh`: compares ramdisk blobs with the phone's firmware; `PULL=1` updates them | no |
+| 4 | bootloader | `04-test-image.sh <img>`: flashes **only** `recovery_<slot>`, boots it, collects logs | recovery only |
+| loop | - | `05-repack.sh <img>`: overlays `recovery/root` changes into an image without a rebuild | no |
+
+Escape hatch: the bootloader lives in ABL and this never touches it. If a test image hangs, hold
+**Power + Vol Up** about 10 s, then **Power + Vol Down** for the bootloader, then
+`fastboot flash recovery_<slot> <official-twrp.img>`.
+
+**Never** run `fastboot flashing lock` on a modified CPH2709. That's a known hard brick.

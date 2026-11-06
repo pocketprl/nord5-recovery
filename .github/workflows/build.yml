@@ -1,0 +1,100 @@
+name: Build AERA (lexus)
+
+on:
+  workflow_dispatch:
+    inputs:
+      MANIFEST_BRANCH:
+        description: "AERA manifest branch"
+        required: true
+        default: "aera-16.0"
+      BUILD_VARIANT:
+        description: "lunch variant (eng keeps root adb for bring-up)"
+        required: true
+        default: "eng"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      DEVICE: lexus
+      DEVICE_PATH: device/oneplus/lexus
+    steps:
+      - name: Free disk space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 4096
+          swap-size-mb: 16384
+          remove-dotnet: true
+          remove-android: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
+          build-mount-path: /home/runner/aera
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y repo git-lfs bc bison flex libssl-dev rsync zip unzip python3 ccache
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          df -h /home/runner/aera
+          free -h
+
+      - name: Sync AERA source (shallow)
+        working-directory: /home/runner/aera
+        run: |
+          repo init -u https://github.com/AERA-Recovery/android_manifest.git \
+            -b ${{ inputs.MANIFEST_BRANCH }} --depth=1 --no-clone-bundle
+          repo sync -c --no-tags --no-clone-bundle --optimized-fetch --force-sync -j"$(nproc)"
+          du -sh .
+
+      - name: Check out device tree
+        uses: actions/checkout@v4
+        with:
+          path: device-tree
+
+      - name: Place device tree
+        run: |
+          mkdir -p "/home/runner/aera/$(dirname "$DEVICE_PATH")"
+          mv device-tree "/home/runner/aera/$DEVICE_PATH"
+          rm -rf "/home/runner/aera/$DEVICE_PATH/.git"
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/aera/.ccache
+          key: ccache-lexus-${{ github.run_id }}
+          restore-keys: ccache-lexus-
+
+      - name: Build recovery image
+        working-directory: /home/runner/aera
+        run: |
+          export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="$PWD/.ccache"
+          ccache -M 5G
+          source build/envsetup.sh
+          lunch twrp_${DEVICE}-bp2a-${{ inputs.BUILD_VARIANT }}
+          mka adbd recoveryimage
+          ccache -s
+
+      - name: Collect artifacts
+        id: art
+        working-directory: /home/runner/aera
+        run: |
+          O=out/target/product/$DEVICE
+          D=$(date +%Y%m%d)
+          mkdir -p /home/runner/dist
+          cp $O/recovery.img /home/runner/dist/AERA-lexus-$D-${{ github.run_number }}.img
+          (cd $O/recovery/root && find . -type f | sort) > /home/runner/dist/ramdisk-files.txt
+          sha256sum /home/runner/dist/*.img | tee /home/runner/dist/SHA256SUMS
+          ls -la /home/runner/dist
+          echo "tag=lexus-$D-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.art.outputs.tag }}
+          name: AERA lexus ${{ steps.art.outputs.tag }}
+          prerelease: true
+          files: /home/runner/dist/*
