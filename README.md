@@ -61,6 +61,14 @@ Before pushing, `tools/aera-lint.sh <bootable/recovery> <vendor/recovery>` check
 sources (unknown flags, combinations AERA rejects, missing filesystem types). CI runs the same check
 before the long build.
 
+Locally (needs ~120 GB free, 16 GB+ swap; compressed zram swap strongly recommended):
+```bash
+tools/local/start-sync.sh      # unattended, resumable sync as a systemd user service:
+                               # blocks sleep/lid suspend, retries, re-brings the network up
+tail -f ~/aera-lexus/src-sync.log
+tools/local/build.sh           # copies this tree in, builds with a RAM-safe -j, ccache in ~/.cache
+```
+
 ## Bring-up runbook (`tools/`)
 
 | Step | Phone state | Script | Writes to phone? |
