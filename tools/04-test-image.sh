@@ -1,53 +1,117 @@
 #!/bin/bash
-# Usage: 04-test-image.sh <recovery.img> [a|b|both]
-# Phone in BOOTLOADER. Flashes ONLY recovery_<slot> (default: current slot),
-# reboots to recovery, waits for adb, then collects everything worth reading.
-# Refuses anything that isn't a sane boot image that fits the partition.
-set -u
-IMG="${1:?usage: $0 <recovery.img> [a|b|both]}"
-WHICH="${2:-current}"
+# Usage: 04-test-image.sh <recovery.img> [--also-other-slot]
+#
+# Phone in BOOTLOADER. Flashes the image to recovery on the CURRENT slot (the
+# only one that boots), reboots into it, proves the partition holds exactly
+# this image, then collects everything worth reading.
+#
+#   --also-other-slot  also write the inactive slot's recovery, so a later slot
+#                      switch or OTA keeps it. That copy is NOT booted or tested.
+#
+# Never switches slots. Every check runs before anything is written, and any
+# failure stops the script before it reboots.
+set -euo pipefail
+. "$(dirname "$0")/lib/log.sh"
+
+IMG="${1:-}"
+[ -n "$IMG" ] || die "usage: $0 <recovery.img> [--also-other-slot]"
+ALSO_OTHER=0
+case "${2:-}" in
+  "") ;;
+  --also-other-slot) ALSO_OTHER=1 ;;
+  *) die "unknown option: $2 (slots are chosen automatically; see the header)" ;;
+esac
+[ -f "$IMG" ] || die "no such file: $IMG"
 OUT="${OUT:-$PWD/lexus-device-logs/$(date +%Y%m%d-%H%M%S)-test}"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-150}"
-mkdir -p "$OUT"; cp "$IMG" "$OUT/flashed.img"
 
-[ "$(head -c 8 "$IMG")" = "ANDROID!" ] || { echo "Not an Android boot image (no ANDROID! magic). Refusing."; exit 1; }
-fastboot devices | grep -q . || { echo "No fastboot device."; exit 1; }
-gv() { fastboot getvar "$1" 2>&1 | sed -nE "s/^$1: ?//p" | head -1; }
-[ "$(gv unlocked)" = "yes" ] || { echo "Bootloader not unlocked. Refusing."; exit 1; }
+# ---------------------------------------------------------------- preflight
+[ "$(head -c 8 "$IMG")" = "ANDROID!" ] || die "not an android boot image (no ANDROID! magic)"
+
+ndev=$(fastboot devices | grep -c . || true)
+[ "$ndev" -eq 1 ] || die "need exactly one fastboot device, found $ndev"
+
+gv() {
+  local out
+  out=$(fastboot getvar "$1" 2>&1) || die "fastboot getvar $1 failed: $out"
+  sed -nE "s/^$1: ?//p" <<<"$out" | head -1
+}
+
+[ "$(gv unlocked)" = "yes" ] || die "bootloader is NOT unlocked"
 
 cur="$(gv current-slot)"; cur="${cur#_}"
-case "$WHICH" in current) slots="$cur";; a|b) slots="$WHICH";; both) slots="a b";; *) echo "bad slot"; exit 1;; esac
+case "$cur" in a|b) ;; *) die "unexpected current-slot: '$cur'" ;; esac
+other=$([ "$cur" = a ] && echo b || echo a)
 
-for s in $slots; do
-  if [ "$(gv slot-unbootable:$s)" = "yes" ]; then
-    echo "Slot $s is marked unbootable (normal after an OTA). Refusing to flash its recovery."; exit 1
-  fi
-done
+slots="$cur"
+if [ "$ALSO_OTHER" = 1 ]; then slots="$cur $other"; fi
 
 img_sz=$(stat -c %s "$IMG")
+img_sha=$(sha256sum "$IMG" | cut -d' ' -f1)
 for s in $slots; do
-  part_sz=$(printf '%d' "$(gv partition-size:recovery_$s)" 2>/dev/null || echo 0)
-  if [ "$part_sz" -le 0 ] || [ "$img_sz" -gt "$part_sz" ]; then
-    echo "recovery_$s: image $img_sz B vs partition $part_sz B. Refusing."; exit 1
-  fi
-  echo "recovery_$s: image $img_sz B fits in $part_sz B"
+  [ "$(gv "slot-unbootable:$s")" != "yes" ] || die "slot $s is marked unbootable (normal after an ota); not touching it"
+  raw=$(gv "partition-size:recovery_$s")
+  part_sz=$(printf '%d' "$raw" 2>/dev/null) || die "unreadable partition-size for recovery_$s: '$raw'"
+  [ "$part_sz" -gt 0 ] && [ "$img_sz" -le "$part_sz" ] || die "recovery_$s: image $img_sz B does not fit $part_sz B"
+  ok "recovery_$s: image $img_sz b fits in $part_sz b"
 done
 
-for s in $slots; do fastboot flash "recovery_$s" "$IMG" 2>&1 | tee -a "$OUT/fastboot.txt"; done
-fastboot reboot recovery 2>&1 | tee -a "$OUT/fastboot.txt"
+mkdir -p "$OUT"
+cp "$IMG" "$OUT/flashed.img"
+echo "$img_sha  flashed.img" > "$OUT/flashed.sha256"
+hdr "plan"
+kv "image" "$IMG"
+kv "sha256" "$img_sha"
+kv "will flash" "$(for s in $slots; do printf 'recovery_%s ' "$s"; done)"
+kv "will boot" "recovery_$cur (current slot)"
+if [ "$ALSO_OTHER" = 1 ]; then warn "recovery_$other gets written but will NOT be booted or verified."; fi
 
-echo "Waiting up to ${BOOT_TIMEOUT}s for adb in recovery..."
+# ---------------------------------------------------------------- flash
+hdr "flash"
+for s in $slots; do
+  log="$OUT/fastboot-flash-$s.txt"
+  act "fastboot flash recovery_$s"
+  if ! fastboot flash "recovery_$s" "$IMG" 2>&1 | tee "$log"; then
+    die "fastboot flash recovery_$s failed; NOT REBOOTING. log: $log"
+  fi
+  ! grep -qiE 'FAILED|error' "$log" || die "fastboot reported an error for recovery_$s; NOT REBOOTING. log: $log"
+done
+
+act "fastboot reboot recovery"
+fastboot reboot recovery 2>&1 | tee "$OUT/fastboot-reboot.txt" \
+  || die "fastboot reboot recovery failed; phone should still be in the bootloader"
+
+# ---------------------------------------------------------------- boot
+hdr "boot"
+info "waiting up to ${BOOT_TIMEOUT}s for adb in recovery"
 if ! timeout "$BOOT_TIMEOUT" adb wait-for-recovery; then
-  echo
-  echo "!! No adb after ${BOOT_TIMEOUT}s. Check the screen:"
-  echo "   - Stuck/black: hold Power + Vol Up ~10s, then Power + Vol Down for bootloader."
-  echo "   - Then: fastboot flash recovery_$cur <known-good twrp.img>"
+  err "NO ADB after ${BOOT_TIMEOUT}s. recovery_$cur holds the new image but did not come up."
+  warn "stuck/black screen: hold power + vol up ~10s, then power + vol down for the bootloader"
+  warn "then: fastboot flash recovery_$cur <known-good image>"
   exit 2
 fi
 
-echo "adb is up. Collecting logs -> $OUT"
-a() { adb shell "$1" 2>&1 | tr -d '\r' > "$OUT/$2"; }
-adb pull /tmp/recovery.log "$OUT/recovery.log" >/dev/null 2>&1
+# ---------------------------------------------------------------- verify
+ok "adb is up"
+hdr "verify"
+booted=$(adb shell getprop ro.boot.slot_suffix | tr -d '\r')
+[ "$booted" = "_$cur" ] || die "booted slot is '$booted', expected _$cur"
+
+if [ "$(adb shell id -u | tr -d '\r')" = "0" ]; then
+  dev_sha=$(adb shell "head -c $img_sz /dev/block/by-name/recovery_$cur | sha256sum" | tr -d '\r' | cut -d' ' -f1)
+  [ "$dev_sha" = "$img_sha" ] \
+    || die "recovery_$cur does NOT match the image (device $dev_sha, image $img_sha); the flash did not take"
+  ok "booted slot _$cur"
+  ok "recovery_$cur on the phone matches the image (sha256 $img_sha)"
+else
+  warn "adb is not root, so the flashed partition could NOT be verified"
+fi
+
+# ---------------------------------------------------------------- collect
+hdr "collect"
+act "pulling logs -> $OUT"
+a() { adb shell "$1" 2>&1 | tr -d '\r' > "$OUT/$2" || true; }
+adb pull /tmp/recovery.log "$OUT/recovery.log" >/dev/null 2>&1 || warn "no /tmp/recovery.log"
 a 'dmesg' dmesg.txt
 a 'logcat -d -b all' logcat.txt
 a 'getprop' getprop.txt
@@ -60,16 +124,18 @@ a 'cat /sys/class/power_supply/battery/capacity' battery.txt
 a 'cat /sys/class/drm/card0-*/modes 2>/dev/null; wm size 2>/dev/null' display.txt
 a 'for z in /sys/class/thermal/thermal_zone*; do echo "${z##*/} $(cat $z/type)"; done' thermal.txt
 
+first() { grep -m1 "$@" 2>/dev/null || true; }
+hdr "services"
+grep -E '^\[init\.svc\.' "$OUT/getprop.txt" 2>/dev/null | sed 's/^/     /' || true
+hdr "summary"
+kv "cpu temp zone3:" "$(first -E '^thermal_zone3 ' "$OUT/thermal.txt") (tree expects cpuss-0)"
+kv "touch input:" "$(first -iE '^N: Name=.*(touchpanel|touch|tcm|syna|s3910)' "$OUT/input-devices.txt")"
+kv "modules loaded prop:" "$(first -F '[twrp.modules.loaded]' "$OUT/getprop.txt")"
+kv "crypto state:" "$(grep -E '^\[ro\.crypto\.(state|type)\]' "$OUT/getprop.txt" 2>/dev/null | tr '\n' ' ' || true)"
+kv "decrypted:" "$(first -F '[twrp.all.users.decrypted]' "$OUT/getprop.txt")"
+kv "backlight max/cur:" "$(tr '\n' ' ' < "$OUT/backlight.txt")"
+kv "battery %:" "$(cat "$OUT/battery.txt")"
+hdr "errors in recovery.log (first 25)"
+grep -iE '^E:|failed|unable' "$OUT/recovery.log" 2>/dev/null | head -25 | sed 's/^/     /' || true
 echo
-echo "================ summary ================"
-printf '  %-22s %s\n' "cpu temp zone3:" "$(grep -E '^thermal_zone3 ' "$OUT/thermal.txt" || echo missing) (tree expects cpuss-0)"
-grep -E '^\[init\.svc\.' "$OUT/getprop.txt" | sed 's/^/  /'
-printf '  %-22s %s\n' "touch input:" "$(grep -iE '^N: Name=.*(touchpanel|touch|tcm|syna|s3910)' "$OUT/input-devices.txt" | head -1 || echo none)"
-printf '  %-22s %s\n' "modules loaded prop:" "$(grep -F '[twrp.modules.loaded]' "$OUT/getprop.txt" || echo unset)"
-printf '  %-22s %s\n' "crypto state:" "$(grep -E '^\[ro\.crypto\.(state|type)\]' "$OUT/getprop.txt" | tr '\n' ' ')"
-printf '  %-22s %s\n' "decrypted:" "$(grep -F '[twrp.all.users.decrypted]' "$OUT/getprop.txt" || echo unset)"
-printf '  %-22s %s\n' "backlight max/cur:" "$(tr '\n' ' ' < "$OUT/backlight.txt")"
-printf '  %-22s %s\n' "battery %:" "$(cat "$OUT/battery.txt")"
-echo "  errors in recovery.log:"
-grep -iE '^E:|failed|unable' "$OUT/recovery.log" 2>/dev/null | head -25 | sed 's/^/    /'
-echo "Full logs: $OUT"
+info "full logs: $OUT"

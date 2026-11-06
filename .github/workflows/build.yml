@@ -26,6 +26,10 @@ jobs:
           git clone --depth 1 -b ${{ inputs.MANIFEST_BRANCH }} https://github.com/AERA-Recovery/android_vendor_recovery aera-vendor
       - name: Lint device tree
         run: device-tree/tools/aera-lint.sh aera-recovery aera-vendor device-tree
+      - name: Bring-up script behaviour tests
+        run: |
+          command -v bc >/dev/null || sudo apt-get install -y bc
+          device-tree/tools/test/run-tool-tests.sh device-tree/tools | diff -u device-tree/tools/test/expected.txt -
 
   build:
     needs: lint
