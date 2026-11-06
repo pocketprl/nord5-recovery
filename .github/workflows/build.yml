@@ -114,6 +114,9 @@ jobs:
           restore-keys: ccache-lexus-
 
       - name: Build recovery image
+        # Backstop only; the soft timeout below fires first and leaves diagnostics.
+        # (A job cancelled or killed mid-step can lose its whole log.)
+        timeout-minutes: 170
         working-directory: /home/runner/aera
         run: |
           export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="$PWD/.ccache"
@@ -123,17 +126,22 @@ jobs:
           ccache -z
           source build/envsetup.sh
           lunch twrp_${DEVICE}-bp2a-${{ inputs.BUILD_VARIANT }}
-          # soong_build/kati analysis prints nothing for 10-25 min and can use
-          # >10 GB; show memory, swap, load and the biggest build process
-          (start=$(date +%s); while sleep 120; do
-             top=$(ps -eo rss=,comm= --sort=-rss | head -1 | awk '{printf "%s %.1fG", $2, $1/1048576}')
-             echo "[*] $(( ($(date +%s)-start)/60 )) min | mem $(free -g | awk '/^Mem/{print $3"/"$2"G"}') | swap $(free -g | awk '/^Swap/{print $3"/"$2"G"}') | load $(cut -d' ' -f1 /proc/loadavg) | top: $top"
-           done) &
+          # soong_build/kati print nothing for a long time; report phase, memory
+          # and soong's own log every minute
+          "$DEVICE_PATH/tools/ci/heartbeat.sh" "$PWD" 60 &
           hb=$!
           rc=0
-          mka adbd recoveryimage || rc=$?
+          # m/mka are shell functions timeout(1) cannot run; call what m wraps
+          timeout --signal=INT --kill-after=2m 150m build/soong/soong_ui.bash --make-mode adbd recoveryimage || rc=$?
           kill $hb 2>/dev/null || true
-          [ $rc -eq 0 ] || sudo dmesg 2>/dev/null | grep -iE 'out of memory|killed process' | tail -3 || true
+          if [ $rc -ne 0 ]; then
+            [ $rc -eq 124 ] && echo "[!!] build hit the 150 min soft timeout" || echo "[!!] build failed (exit $rc)"
+            echo "── memory ──"; free -h
+            echo "── top processes by rss ──"; ps -eo rss=,etime=,comm= --sort=-rss | head -8 | awk '{printf "  %6.1fG  %10s  %s\n", $1/1048576, $2, $3}'
+            echo "── OOM killer ──"; sudo dmesg 2>/dev/null | grep -iE 'out of memory|killed process' | tail -5 || echo "  none"
+            echo "── out/soong.log (last 30) ──"; tail -30 out/soong.log 2>/dev/null || echo "  none"
+            echo "── out/error.log ──"; tail -40 out/error.log 2>/dev/null || echo "  none"
+          fi
           exit $rc
 
       - name: ccache stats
