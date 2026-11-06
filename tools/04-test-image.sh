@@ -6,7 +6,7 @@
 set -u
 IMG="${1:?usage: $0 <recovery.img> [a|b|both]}"
 WHICH="${2:-current}"
-OUT="${OUT:-$HOME/aera-lexus/device-logs/$(date +%Y%m%d-%H%M%S)-test}"
+OUT="${OUT:-$PWD/lexus-device-logs/$(date +%Y%m%d-%H%M%S)-test}"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-150}"
 mkdir -p "$OUT"; cp "$IMG" "$OUT/flashed.img"
 

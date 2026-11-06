@@ -7,7 +7,7 @@
 set -u
 TREE="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$TREE/recovery/root"
-OUT="${OUT:-$HOME/aera-lexus/device-logs/$(date +%Y%m%d-%H%M%S)-blobs}"
+OUT="${OUT:-$PWD/lexus-device-logs/$(date +%Y%m%d-%H%M%S)-blobs}"
 mkdir -p "$OUT"
 
 adb get-state >/dev/null 2>&1 || { echo "No adb device."; exit 1; }

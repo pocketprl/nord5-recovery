@@ -1,8 +1,6 @@
 # Copyright (C) 2026 AERA Recovery Project contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-AERA_MAINTAINER := therock
-
 # Screen: 1272x2800 [LOS]. SCREEN_H is aspect*120 (2800/1272 = 19.8:9 -> 2376,
 # the same ratio AERA uses for the OnePlus 12).
 AERA_UI_ADAPTIVE_RESOLUTION := true

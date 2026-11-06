@@ -9,8 +9,8 @@ BASE="${1:?usage: $0 <base-recovery.img> [out.img] [overlay-dir]}"
 OUTIMG="${2:-$(dirname "$BASE")/$(basename "$BASE" .img)-repacked.img}"
 TREE="$(cd "$(dirname "$0")/.." && pwd)"
 OVERLAY="${3:-$TREE/recovery/root}"
-MB="${MAGISKBOOT:-$HOME/aera-lexus/bin/magiskboot}"
-[ -x "$MB" ] || { echo "magiskboot not found at $MB"; exit 1; }
+MB="${MAGISKBOOT:-$(command -v magiskboot || true)}"
+[ -n "$MB" ] && [ -x "$MB" ] || { echo "magiskboot not found: put it on PATH or set MAGISKBOOT=/path (it is lib/x86_64/libmagiskboot.so inside the Magisk APK)"; exit 1; }
 
 BASE="$(realpath "$BASE")"; OUTIMG="$(realpath -m "$OUTIMG")"; OVERLAY="$(realpath "$OVERLAY")"
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT

@@ -59,6 +59,10 @@ mka adbd recoveryimage
 | 4 | bootloader | `04-test-image.sh <img>`: flashes **only** `recovery_<slot>`, boots it, collects logs | recovery only |
 | loop | - | `05-repack.sh <img>`: overlays `recovery/root` changes into an image without a rebuild | no |
 
+Logs and backups go to `./lexus-device-logs` and `./lexus-device-backup` (both gitignored, since
+backups contain IMEI/calibration data). `05-repack.sh` needs `magiskboot` on `PATH` or `MAGISKBOOT=`;
+it's `lib/x86_64/libmagiskboot.so` inside the Magisk APK.
+
 Escape hatch: the bootloader lives in ABL and this never touches it. If a test image hangs, hold
 **Power + Vol Up** about 10 s, then **Power + Vol Down** for the bootloader, then
 `fastboot flash recovery_<slot> <official-twrp.img>`.

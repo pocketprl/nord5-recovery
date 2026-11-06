@@ -3,7 +3,7 @@
 # Read-only on the phone: copies small/critical partitions to the PC.
 # Lists sizes and asks before transferring anything. Skips super and userdata.
 set -u
-OUT="${OUT:-$HOME/aera-lexus/device-backup/$(date +%Y%m%d-%H%M%S)}"
+OUT="${OUT:-$PWD/lexus-device-backup/$(date +%Y%m%d-%H%M%S)}"
 MAX_MB="${MAX_MB:-256}"   # skip anything bigger than this (super/userdata are excluded regardless)
 
 adb get-state >/dev/null 2>&1 || { echo "No adb device. Is recovery up?"; exit 1; }

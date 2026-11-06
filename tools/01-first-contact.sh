@@ -4,7 +4,7 @@
 # VERIFY values. Writes nothing to the phone.
 set -u
 TREE="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="${OUT:-$HOME/aera-lexus/device-logs/$(date +%Y%m%d-%H%M%S)-getvar}"
+OUT="${OUT:-$PWD/lexus-device-logs/$(date +%Y%m%d-%H%M%S)-getvar}"
 mkdir -p "$OUT"
 
 fastboot devices | tee "$OUT/devices.txt"
