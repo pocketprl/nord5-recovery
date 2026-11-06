@@ -55,7 +55,11 @@ jobs:
       - name: Install build deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y repo git-lfs bc bison flex libssl-dev rsync zip unzip python3 ccache
+          sudo apt-get install -y git-lfs bc bison flex libssl-dev rsync zip unzip python3 ccache
+          # Google's launcher: apt's is old and nags on every repo command
+          sudo curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo -o /usr/local/bin/repo
+          sudo chmod a+rx /usr/local/bin/repo
+          repo version | head -3
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"
           df -h /home/runner/aera
@@ -70,9 +74,21 @@ jobs:
         run: |
           repo init -u https://github.com/AERA-Recovery/android_manifest.git \
             -b ${{ inputs.MANIFEST_BRANCH }} --depth=1 --no-clone-bundle
+          total=$(repo list 2>/dev/null | wc -l)
+          echo "[*] syncing $total projects"
+          # repo is silent without a terminal; print real progress every minute
+          (start=$(date +%s); while sleep 60; do
+             fetched=$(find .repo/project-objects -maxdepth 7 -name '*.git' -type d 2>/dev/null | wc -l)
+             checked=$(find . -maxdepth 7 -name .git -not -path './.repo/*' 2>/dev/null | wc -l)
+             echo "[*] $(( ($(date +%s)-start)/60 )) min | .repo $(du -sh .repo 2>/dev/null | cut -f1) | fetched $fetched/$total | checked out $checked/$total"
+           done) &
+          hb=$!
+          rc=0
           time repo sync -c --no-tags --no-clone-bundle --optimized-fetch --force-sync \
-            --retry-fetches=5 -j"$(nproc)"
+            --retry-fetches=5 -j"$(nproc)" || rc=$?
+          kill $hb 2>/dev/null || true
           du -sh .
+          exit $rc
 
       - name: Check out device tree
         uses: actions/checkout@v4
