@@ -74,12 +74,15 @@ jobs:
         run: |
           repo init -u https://github.com/AERA-Recovery/android_manifest.git \
             -b ${{ inputs.MANIFEST_BRANCH }} --depth=1 --no-clone-bundle
-          total=$(repo list 2>/dev/null | wc -l)
+          # `repo list` only shows checked-out projects (0 right after init);
+          # the resolved manifest has the real count (411 for aera-16.0)
+          total=$(repo manifest | grep -c '<project ')
           echo "[*] syncing $total projects"
-          # repo is silent without a terminal; print real progress every minute
+          # repo is silent without a terminal; print real progress every minute.
+          # -prune keeps find out of the git object stores.
           (start=$(date +%s); while sleep 60; do
-             fetched=$(find .repo/project-objects -maxdepth 7 -name '*.git' -type d 2>/dev/null | wc -l)
-             checked=$(find . -maxdepth 7 -name .git -not -path './.repo/*' 2>/dev/null | wc -l)
+             fetched=$(find .repo/project-objects -name '*.git' -type d -prune 2>/dev/null | wc -l)
+             checked=$(find . -path ./.repo -prune -o -name .git -prune -print 2>/dev/null | wc -l)
              echo "[*] $(( ($(date +%s)-start)/60 )) min | .repo $(du -sh .repo 2>/dev/null | cut -f1) | fetched $fetched/$total | checked out $checked/$total"
            done) &
           hb=$!
