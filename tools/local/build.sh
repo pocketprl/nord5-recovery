@@ -3,6 +3,7 @@
 #   tools/local/build.sh [eng|userdebug|user]
 #
 #   SRC   source root (default ~/aera-lexus/src)
+#   CCACHE_DIR  default $SRC/out/.ccache (must be under out/, see below)
 #   JOBS  ninja jobs (default: one per ~1.2 GB of RAM, capped at nproc;
 #         32 parallel clang jobs on 14 GB would OOM)
 #
@@ -29,7 +30,11 @@ act "syncing device tree -> device/oneplus/lexus"
 mkdir -p "$SRC/device/oneplus"
 rsync -a --delete --exclude .git --exclude 'lexus-device-*' "$TREE/" "$SRC/device/oneplus/lexus/"
 
-export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="${CCACHE_DIR:-$HOME/.cache/aera-ccache}"
+# Inside out/: Android 16 runs build actions in a sandbox where everything
+# outside out/ is read-only, so a cache in ~/.cache fails with EROFS. (CI
+# doesn't hit this: Ubuntu 26.04 blocks the user namespaces the sandbox needs.)
+export USE_CCACHE=1 CCACHE_EXEC="$(command -v ccache)" CCACHE_DIR="${CCACHE_DIR:-$SRC/out/.ccache}"
+mkdir -p "$CCACHE_DIR"
 ccache -M 20G >/dev/null
 ccache -z >/dev/null
 
