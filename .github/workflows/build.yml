@@ -41,11 +41,19 @@ jobs:
       DEVICE: lexus
       DEVICE_PATH: device/oneplus/lexus
     steps:
+      # On the ubuntu-26.04 runners /mnt is on the root filesystem, so the
+      # action's "temp disk" volume (temp free - temp-reserve) ate the root
+      # reserve and left / at exactly temp-reserve-mb (100 MB) in every run.
+      # Run 9 died in apt-get update with "No space left". Reserve on both
+      # sides so / keeps ~10 GB on either layout. Disk swap is only a fallback
+      # behind zram now, so it shrinks to 4 GB and the build volume stays the
+      # same size. (It has to run before zram: the action does `swapoff -a`.)
       - name: Free disk space
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 4096
-          swap-size-mb: 16384
+          root-reserve-mb: 14336
+          temp-reserve-mb: 10240
+          swap-size-mb: 4096
           remove-dotnet: true
           remove-android: true
           remove-haskell: true
@@ -63,8 +71,11 @@ jobs:
           repo version | head -3
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@users.noreply.github.com"
-          df -h /home/runner/aera
+          df -h / /home/runner/aera
           free -h
+          # Fail here, with a clear message, rather than mid-build
+          root_free=$(df --output=avail -m / | tail -1)
+          [ "$root_free" -ge 2048 ] || { echo "[!!] only ${root_free} MB free on / after cleanup"; exit 1; }
 
       # soong_build's Go heap outgrows the runner's 16 GB. Disk swap alone stalls
       # the whole VM (runs 5 and 6: silent for 40+ min, even the heartbeat froze).
