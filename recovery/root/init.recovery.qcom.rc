@@ -43,6 +43,17 @@ service overrideprops /system/bin/overrideprops.sh
     oneshot
     seclabel u:r:recovery:s0
 
+# Adreno 735: Qualcomm EGL imports gralloc-native buffers, so the stock
+# allocator runs as an init service (as in AERA's peridot tree, same GPU).
+# oneshot: if a mismatch stops it registering, don't respawn it every 5 s.
+service aera-graphics-allocator /vendor/bin/hw/vendor.qti.hardware.display.allocator-service
+    class hal
+    user root
+    group root graphics
+    capabilities SYS_NICE
+    oneshot
+    seclabel u:r:recovery:s0
+
 on init
     setprop prepdecrypt.setpatch true
     start vendor.boot-qti
@@ -52,6 +63,9 @@ on fs
     wait /dev/block/platform/soc/${ro.boot.bootdevice}
     symlink /dev/block/platform/soc/${ro.boot.bootdevice} /dev/block/bootdevice
     write /proc/sys/kernel/firmware_config/force_sysfs_fallback 1
+    # KGSL loads gen71100_* with the direct loader (no ueventd fallback), so
+    # point the kernel at the ramdisk copy. Other firmware still uses ueventd.
+    write /sys/module/firmware_class/parameters/path /vendor/firmware
     chmod 0660 /dev/qseecom
     chown system drmrpc /dev/qseecom
     chmod 0664 /dev/ion

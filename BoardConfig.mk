@@ -36,6 +36,7 @@ TARGET_USES_UEFI := true
 QCOM_BOARD_PLATFORMS += pineapple
 # Adreno 735 (gen7_11_0) [LOS] proprietary-files: gen71100_*.fw
 TARGET_BOARD_PLATFORM_GPU := qcom-adreno735
+TARGET_USES_VULKAN := true
 
 # Assert [LOS][TW]
 TARGET_OTA_ASSERT_DEVICE := OP6131L1,lexus,CPH2709,CPH2707
@@ -169,7 +170,7 @@ AERA_QCOM_ATS_OFFSET := 1666528204500
 # HBP stack (oplus_hbp_core + hbp_syna_s3910 + synaptics_tcm2). Dropped from [TW]:
 # qcom_esoc.ko and oplus_bsp_tp_tcm_oncell.ko (not shipped on this firmware).
 # Panel-vendor alternates stay listed; modules that don't match just fail to probe.
-AERA_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko rproc_qcom_common.ko q6_dlkm.ko qcom_q6v5.ko qcom_q6v5_pas.ko qcom_sysmon.ko qcom-hv-haptics.ko haptic_feedback.ko oplus_chg_v2.ko oplus_bsp_tp_custom.ko oplus_bsp_tp_common.ko oplus_bsp_tp_notify.ko oplus_hbp_core.ko oplus_bsp_synaptics_tcm2.ko oplus_bsp_tp_syna_common.ko oplus_bsp_tp_hbp_syna_s3910.ko oplus_bsp_tp_tcm_S3910.ko oplus_bsp_tp_tcm_S3908.ko goodix_ts.ko oplus_bsp_tp_hbp_goodix_gt99x6.ko oplus_bsp_tp_gt9966.ko oplus_bsp_tp_gt9916.ko oplus_bsp_tp_novatek_common.ko oplus_bsp_tp_nt36532_noflash.ko"
+AERA_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko rproc_qcom_common.ko q6_dlkm.ko qcom_q6v5.ko qcom_q6v5_pas.ko qcom_sysmon.ko qcom-hv-haptics.ko haptic_feedback.ko oplus_chg_v2.ko oplus_bsp_tp_custom.ko oplus_bsp_tp_common.ko oplus_bsp_tp_notify.ko oplus_hbp_core.ko oplus_bsp_synaptics_tcm2.ko oplus_bsp_tp_syna_common.ko oplus_bsp_tp_hbp_syna_s3910.ko oplus_bsp_tp_tcm_S3910.ko oplus_bsp_tp_tcm_S3908.ko goodix_ts.ko oplus_bsp_tp_hbp_goodix_gt99x6.ko oplus_bsp_tp_gt9966.ko oplus_bsp_tp_gt9916.ko oplus_bsp_tp_novatek_common.ko oplus_bsp_tp_nt36532_noflash.ko msm_kgsl.ko"
 AERA_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
 
 # Haptics [TW]
