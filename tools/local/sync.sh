@@ -66,6 +66,27 @@ progress() {
   done
 }
 
+# repo treats a project with a gitdir but no `shallow` file as "manually
+# unshallowed" and fetches its FULL history (project.py: `if depth and not
+# is_new and not self._HasShallow(): depth = None`). A first shallow fetch that
+# dies mid-transfer leaves exactly that state: on 2026-11-07 it turned
+# prebuilts/rust and prebuilts/sdk into 50+ GB. Before each retry, reset such
+# projects so they count as new again. Tiny repos with a single commit also lack
+# a shallow file legitimately, hence the size floor.
+reset_unshallowed() {
+  local g od sz p
+  while IFS= read -r g; do
+    [ -f "$g/shallow" ] && continue
+    od="$(readlink -f "$g/objects" 2>/dev/null)"; od="${od%/objects}"
+    [ -n "$od" ] && [ -d "$od" ] || continue
+    sz=$(du -sm "$od" 2>/dev/null | cut -f1)
+    [ "${sz:-0}" -ge "${UNSHALLOW_RESET_MB:-300}" ] || continue
+    p="${g#.repo/projects/}"; p="${p%.git}"
+    warn "resetting $p: no shallow marker after a failed fetch, ${sz} MB of objects (would refetch full history)"
+    rm -rf -- "$g" "$od" "$p"
+  done < <(find .repo/projects -name '*.git' -type d -prune 2>/dev/null)
+}
+
 cleanup() { kill "${wd:-}" "${pg:-}" 2>/dev/null || true; }
 trap cleanup EXIT
 
@@ -102,6 +123,7 @@ until repo sync -c --no-tags --no-clone-bundle --optimized-fetch --retry-fetches
   err "repo sync failed (attempt $attempt); retrying in ${backoff}s"
   # After a failure, let repo replace any project left in a broken state
   force="--force-sync"
+  reset_unshallowed
   sleep "$backoff"
   wait_for_net
 done
