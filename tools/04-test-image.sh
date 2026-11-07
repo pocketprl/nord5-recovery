@@ -123,6 +123,10 @@ a 'cat /sys/class/backlight/*/max_brightness /sys/class/backlight/*/brightness' 
 a 'cat /sys/class/power_supply/battery/capacity' battery.txt
 a 'cat /sys/class/drm/card0-*/modes 2>/dev/null; wm size 2>/dev/null' display.txt
 a 'for z in /sys/class/thermal/thermal_zone*; do echo "${z##*/} $(cat $z/type)"; done' thermal.txt
+# GPU: AERA only falls back to software when GPU *setup* fails; a GPU that
+# initialises but rejects frames leaves the screen black (see gpu/README.md)
+a 'aera-gpu-probe 2>&1; echo "probe_exit=$?"' gpu-probe.txt
+a 'logcat -d 2>/dev/null | grep -iE "adreno|kgsl|gpu display|software mode|rejected the lvgl" | tail -20' gpu-log.txt
 
 first() { grep -m1 "$@" 2>/dev/null || true; }
 hdr "services"
@@ -135,6 +139,11 @@ kv "crypto state:" "$(grep -E '^\[ro\.crypto\.(state|type)\]' "$OUT/getprop.txt"
 kv "decrypted:" "$(first -F '[twrp.all.users.decrypted]' "$OUT/getprop.txt")"
 kv "backlight max/cur:" "$(tr '\n' ' ' < "$OUT/backlight.txt")"
 kv "battery %:" "$(cat "$OUT/battery.txt")"
+gpu=$(first -E '^AERA GPU ready|aera-gpu-probe:' "$OUT/gpu-probe.txt")
+kv "gpu probe:" "${gpu:-<no output>} ($(first -oE 'probe_exit=[0-9]+' "$OUT/gpu-probe.txt"))"
+if grep -qiE 'rejected the lvgl' "$OUT/gpu-log.txt" 2>/dev/null; then
+  err "AERA logged rejected GPU frames: the screen may be black. software fallback: REMOVE=vendor/lib64/egl tools/05-repack.sh <img>"
+fi
 hdr "errors in recovery.log (first 25)"
 grep -iE '^E:|failed|unable' "$OUT/recovery.log" 2>/dev/null | head -25 | sed 's/^/     /' || true
 echo

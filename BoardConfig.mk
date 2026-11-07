@@ -200,10 +200,11 @@ AERA_ENABLE_FS_COMPRESSION := true
 # Debug: keep these until bring-up is done
 TARGET_USES_LOGD := true
 AERA_INCLUDE_LOGCAT := true
-TARGET_RECOVERY_DEVICE_MODULES += debuggerd strace
+TARGET_RECOVERY_DEVICE_MODULES += debuggerd strace aera-gpu-probe
 RECOVERY_BINARY_SOURCE_FILES += \
     $(TARGET_OUT_EXECUTABLES)/debuggerd \
-    $(TARGET_OUT_EXECUTABLES)/strace
+    $(TARGET_OUT_EXECUTABLES)/strace \
+    $(TARGET_OUT_EXECUTABLES)/aera-gpu-probe
 
 # System libraries the ramdisk needs built in. [TW] set for display/debug, plus
 # libjsoncpp (ssgtzd, vibrator) and common-V2-ndk (qseecom AIDL) for the A16 stack

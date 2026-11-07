@@ -1,5 +1,7 @@
 #!/bin/bash
 # Usage: 05-repack.sh <base-recovery.img> [out.img] [overlay-dir]
+#   REMOVE="path [path...]"  also delete these ramdisk paths (recursively), e.g.
+#                            REMOVE=vendor/lib64/egl forces AERA's software renderer
 # Fast loop without a rebuild: unpack a built AERA (or TWRP) recovery image,
 # overlay files from the tree's recovery/root (or overlay-dir), repack.
 # Only ramdisk content changes; anything that needs BoardConfig flags or C++ changes
@@ -33,7 +35,8 @@ while IFS= read -r f; do
   mode=0644; [ -x "$f" ] && mode=0755
   cmds+=("add $mode $rel $f"); n=$((n+1))
 done < <(find "$OVERLAY" -type f | sort)
-act "overlaying $n files from $OVERLAY"
+for r in ${REMOVE:-}; do cmds+=("rm -r $r"); done
+act "overlaying $n files from $OVERLAY${REMOVE:+, removing: $REMOVE}"
 "$MB" cpio ramdisk.cpio "${cmds[@]}"
 
 act "repacking -> $OUTIMG"

@@ -38,9 +38,8 @@ PRODUCT_PACKAGES += \
 PRODUCT_EXTRA_RECOVERY_KEYS += \
     $(LOCAL_PATH)/security/otacert
 
-# Adreno 735 GPU acceleration (see gpu/README.md). AERA falls back to software
-# rendering if the driver doesn't load.
-PRODUCT_PACKAGES += aera-gpu-probe
+# Adreno 735 GPU acceleration (see gpu/README.md). aera-gpu-probe goes into the
+# ramdisk through TARGET_RECOVERY_DEVICE_MODULES in BoardConfig.mk.
 PRODUCT_VENDOR_PROPERTIES += ro.hardware.egl=adreno
 
 # Soong namespaces
