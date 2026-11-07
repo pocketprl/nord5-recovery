@@ -128,5 +128,13 @@ until repo sync -c --no-tags --no-clone-bundle --optimized-fetch --retry-fetches
   wait_for_net
 done
 
+# Fetches killed by network drops leave tmp_pack_* files git never uses again
+# (6.3 GB after the 2026-11-07 overnight sync). Nothing fetches now, so drop them.
+junk=$(find .repo/project-objects \( -name 'tmp_pack_*' -o -name 'tmp_idx_*' \) -type f -printf '%s\n' 2>/dev/null | awk '{s+=$1} END{print s+0}')
+if [ "$junk" -gt 0 ]; then
+  find .repo/project-objects \( -name 'tmp_pack_*' -o -name 'tmp_idx_*' \) -type f -delete
+  info "removed $((junk / 1048576)) MB of partial packs left by interrupted fetches"
+fi
+
 touch .sync-complete
 ok "SYNC COMPLETE after $attempt retries: $(du -sh . | cut -f1) in $SRC"
