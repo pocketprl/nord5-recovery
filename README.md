@@ -94,6 +94,8 @@ Logs and backups go to `./lexus-device-logs` and `./lexus-device-backup` (both g
 backups contain IMEI/calibration data). `05-repack.sh` needs `magiskboot` on `PATH` or `MAGISKBOOT=`;
 it's `lib/x86_64/libmagiskboot.so` inside the Magisk APK.
 
+Full step-by-step: [docs/UNLOCK-DAY.md](docs/UNLOCK-DAY.md).
+
 Escape hatch: the bootloader lives in ABL and this never touches it. If a test image hangs, hold
 **Power + Vol Up** about 10 s, then **Power + Vol Down** for the bootloader, then
 `fastboot flash recovery_<slot> <official-twrp.img>`.
