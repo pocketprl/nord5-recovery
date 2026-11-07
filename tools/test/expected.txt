@@ -1,7 +1,7 @@
 04 flash fails                       exit=1 calls=4cc598cbaaad 0reboots
 04 also-other b unbootable           exit=1 calls=59956e96ce26 0reboots
-04 also-other b bootable             exit=0 calls=b9cb9015c1fa 1reboots
-04 happy                             exit=0 calls=619c4d0a79f1 1reboots
+04 also-other b bootable             exit=0 calls=330822fe2f2e 1reboots
+04 happy                             exit=0 calls=478cebb12365 1reboots
 04 hash mismatch                     exit=1 calls=3dc76ecc8c3e 1reboots
 04 wrong slot                        exit=1 calls=07991a8cd352 1reboots
 04 two devices                       exit=1 calls=5c2aa876dfd2 0reboots

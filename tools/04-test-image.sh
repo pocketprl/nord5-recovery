@@ -127,6 +127,11 @@ a 'for z in /sys/class/thermal/thermal_zone*; do echo "${z##*/} $(cat $z/type)";
 # initialises but rejects frames leaves the screen black (see gpu/README.md)
 a 'aera-gpu-probe 2>&1; echo "probe_exit=$?"' gpu-probe.txt
 a 'logcat -d 2>/dev/null | grep -iE "adreno|kgsl|gpu display|software mode|rejected the lvgl" | tail -20' gpu-log.txt
+# Remote processors: name, firmware file and state. Answers where qca6750/wpss.mdt
+# really comes from (not found in any OTA partition before unlock).
+a 'for r in /sys/class/remoteproc/remoteproc*; do echo "$(cat $r/name 2>/dev/null) firmware=$(cat $r/firmware 2>/dev/null) state=$(cat $r/state 2>/dev/null)"; done' remoteproc.txt
+a 'cat /tmp/aera_wlan_early.log 2>/dev/null; ip link show wlan0 2>&1' wlan.txt
+a 'logcat -d -s AERA-Audio 2>/dev/null | tail -40' audio.txt
 
 first() { grep -m1 "$@" 2>/dev/null || true; }
 hdr "services"
@@ -144,6 +149,9 @@ kv "gpu probe:" "${gpu:-<no output>} ($(first -oE 'probe_exit=[0-9]+' "$OUT/gpu-
 if grep -qiE 'rejected the lvgl' "$OUT/gpu-log.txt" 2>/dev/null; then
   err "AERA logged rejected GPU frames: the screen may be black. software fallback: REMOVE=vendor/lib64/egl tools/05-repack.sh <img>"
 fi
+kv "wpss remoteproc:" "$(first -iE 'wpss' "$OUT/remoteproc.txt")"
+kv "wlan:" "$(grep -E 'STOP:|wlan0 up|WPSS firmware:' "$OUT/wlan.txt" 2>/dev/null | tail -2 | tr '\n' ' ' || true)"
+kv "audio stage:" "$(grep -oE '(FAILED )?stage=[a-z0-9-]+.*|backend is ready' "$OUT/audio.txt" 2>/dev/null | tail -1 || true)"
 hdr "errors in recovery.log (first 25)"
 grep -iE '^E:|failed|unable' "$OUT/recovery.log" 2>/dev/null | head -25 | sed 's/^/     /' || true
 echo

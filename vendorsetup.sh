@@ -46,4 +46,6 @@ if [ "$1" = "$FDEVICE" -o "$AERA_BUILD_DEVICE" = "$FDEVICE" ]; then
 	export TARGET_DEVICE_ALT="lexus,OP6131L1,CPH2709,CPH2707"
 	export AERA_TARGET_DEVICES="$TARGET_DEVICE_ALT"
 	export AERA_USE_DMSETUP=1
+	# KernelSU / KernelSU-Next / SukiSU-Ultra root manager (kernel 6.1 assets only)
+	export AERA_ENABLE_ROOT_MANAGER=1
 fi

@@ -146,6 +146,8 @@ TARGET_VENDOR_PROP += $(DEVICE_PATH)/vendor.prop
 # Display: 1272x2800, panel modes 60/90/120/144 Hz (dumpsys display on CPH2709)
 AERA_THEME := portrait_hdpi
 AERA_FRAMERATE := 120
+AERA_DRM_FIXED_REFRESH_RATE := 120
+AERA_DEVICE_VERSION := Nord_5
 AERA_BRIGHTNESS_PATH := "/sys/devices/platform/soc/ae00000.qcom,mdss_mdp/backlight/panel0-backlight/brightness" # [TW]
 # Brightness from the panel node in stock dtbo (16.0.5.1301 EX01): sysfs scale
 # qcom,mdss-brightness-max-level = 0xfff (4095); oplus normal (non-HBM) max
@@ -172,6 +174,10 @@ AERA_QCOM_ATS_OFFSET := 1666528204500
 # Panel-vendor alternates stay listed; modules that don't match just fail to probe.
 AERA_LOAD_VENDOR_MODULES := "adsp_loader_dlkm.ko rproc_qcom_common.ko q6_dlkm.ko qcom_q6v5.ko qcom_q6v5_pas.ko qcom_sysmon.ko qcom-hv-haptics.ko haptic_feedback.ko oplus_chg_v2.ko oplus_bsp_tp_custom.ko oplus_bsp_tp_common.ko oplus_bsp_tp_notify.ko oplus_hbp_core.ko oplus_bsp_synaptics_tcm2.ko oplus_bsp_tp_syna_common.ko oplus_bsp_tp_hbp_syna_s3910.ko oplus_bsp_tp_tcm_S3910.ko oplus_bsp_tp_tcm_S3908.ko goodix_ts.ko oplus_bsp_tp_hbp_goodix_gt99x6.ko oplus_bsp_tp_gt9966.ko oplus_bsp_tp_gt9916.ko oplus_bsp_tp_novatek_common.ko oplus_bsp_tp_nt36532_noflash.ko msm_kgsl.ko"
 AERA_LOAD_VENDOR_MODULES_EXCLUDE_GKI := true
+# After decryption: the audio chain (AERA waffle's list, every module verified
+# present in lexus vendor_dlkm) and Wi-Fi (qca6750 on WPSS via icnss2; waffle's
+# kiwi_v2 PCIe driver swapped out). rfkill is built into the lexus kernel.
+AERA_POST_DECRYPT_MODULES := "icnss2.ko cnss_prealloc.ko cnss_nl.ko wlan_firmware_service.ko cnss_plat_ipc_qmi_svc.ko cnss_utils.ko cnss2.ko cfg80211.ko gsim.ko rmnet_mem.ko ipam.ko qca_cld3_qca6750.ko q6_pdr_dlkm.ko q6_notifier_dlkm.ko snd_event_dlkm.ko gpr_dlkm.ko spf_core_dlkm.ko audpkt_ion_dlkm.ko audio_pkt_dlkm.ko q6_dlkm.ko audio_prm_dlkm.ko pinctrl_lpi_dlkm.ko swr_dlkm.ko swr_ctrl_dlkm.ko slimbus.ko wcd_core_dlkm.ko mbhc_dlkm.ko sdca_registers_dlkm.ko wcd9xxx_dlkm.ko stub_dlkm.ko lpass_cdc_dlkm.ko lpass_cdc_wsa2_macro_dlkm.ko lpass_cdc_wsa_macro_dlkm.ko lpass_cdc_va_macro_dlkm.ko lpass_cdc_rx_macro_dlkm.ko lpass_cdc_tx_macro_dlkm.ko wsa884x_dlkm.ko wsa883x_dlkm.ko wcd937x_dlkm.ko wcd937x_slave_dlkm.ko wcd938x_dlkm.ko wcd938x_slave_dlkm.ko wcd9378_dlkm.ko wcd9378_slave_dlkm.ko wcd939x_dlkm.ko wcd939x_slave_dlkm.ko swr_dmic_dlkm.ko oplus_audio_extend.ko swr_haptics_dlkm.ko oplus_audio_tfa98xx_v6.ko oplus_audio_sipa.ko oplus_audio_sipa_tuning.ko oplus_audio_aw882xx.ko msm_ext_display.ko hdmi_dlkm.ko btpower.ko bt_fm_slim.ko machine_dlkm.ko frpc-adsprpc.ko"
 
 # Haptics [TW]
 AERA_SUPPORT_INPUT_AIDL_HAPTICS := true
@@ -195,6 +201,10 @@ AERA_INCLUDE_LPTOOLS := true
 AERA_INCLUDE_FASTBOOTD := true
 AERA_USE_TOOLBOX := true
 AERA_INCLUDE_NTFS_3G := true
+AERA_INCLUDE_FUSE_EXFAT := true
+AERA_INCLUDE_FUSE_NTFS := true
+AERA_INCLUDE_7ZA := true
+AERA_INCLUDE_ZSTD := true
 AERA_ENABLE_FS_COMPRESSION := true
 
 # Debug: keep these until bring-up is done

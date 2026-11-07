@@ -37,11 +37,18 @@ Fixed relative to the upstream TWRP tree:
 - `init` started a nonexistent `health-hal-2-1` instead of the `health-default` service that actually exists
 - `variant-script.sh` had a stray `;;` after `esac`, a syntax error, so it never set the model props
 
-## Phases
+## Features
 
-1. **Base** (this tree): display, touch, ADB/MTP/fastbootd, FBE decryption, haptics, flash/backup.
-   Feature parity with official TWRP, inside AERA.
-2. Wi-Fi (`qca6750` + `icnss2`, following peridot), Adreno 735 GPU acceleration, audio.
+| | Status | Notes |
+|---|---|---|
+| Display, touch, ADB, MTP, fastbootd | built | from the official TWRP base, verified against OxygenOS 16 |
+| FBE decryption | built | OxygenOS 16 keymint/gatekeeper/qseecom stack |
+| GPU (Adreno 735) | built | see `gpu/README.md`; software fallback on setup failure |
+| Wi-Fi (qca6750 / WPSS) | built | real MAC from persist; WPSS firmware location confirmed on hardware |
+| Audio (TFA98xx speaker, PAL/AGM) | built | runs the phone's installed audio stack; from AERA's waffle tree |
+| Flashlight, root manager (KernelSU family, 6.1), exFAT/NTFS over OTG, 120 Hz UI | built | |
+
+Nothing above has run on hardware yet; `tools/04-test-image.sh` reports each one.
 
 ## Build
 

@@ -42,6 +42,11 @@ PRODUCT_EXTRA_RECOVERY_KEYS += \
 # ramdisk through TARGET_RECOVERY_DEVICE_MODULES in BoardConfig.mk.
 PRODUCT_VENDOR_PROPERTIES += ro.hardware.egl=adreno
 
+# Audio: PAL/AGM host and the plugin PCM bridge (audio/, from AERA's waffle tree)
+PRODUCT_PACKAGES += \
+    aera-audio-bridge \
+    aera-audio-service
+
 # Soong namespaces
 PRODUCT_SOONG_NAMESPACES += $(LOCAL_PATH)
 

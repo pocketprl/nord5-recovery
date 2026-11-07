@@ -38,5 +38,13 @@ AERA_ENABLE_FRP_WIPE := 1
 AERA_LOOP_DEVICE_ERRORS_TO_LOG := 1
 AERA_USE_LOCKSCREEN_BUTTON := 1
 
-# Phase 2: flip on once qca6750 modules/firmware are wired up
-AERA_ENABLE_WLAN := 0
+# Wi-Fi: qca6750 on WPSS (init.recovery.wifi.rc, system/bin/aera_wlan_early.sh)
+AERA_ENABLE_WLAN := 1
+
+# Flashlight: AERA's default (led:torch_0 + led:switch_0) matches the lexus PMIC
+# flash nodes in the device tree. Don't set FL_PATH1/2: FL_PATH2 maps to a legacy
+# TW_ name the UI never reads, so explicit paths would leave the switch LED off.
+AERA_FLASHLIGHT_ENABLE := 1
+
+# Root manager: only the providers built for the lexus kernel (6.1 GKI)
+AERA_ROOT_MODULE_KERNELS := 6.1

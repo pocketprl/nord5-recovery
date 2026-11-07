@@ -44,6 +44,8 @@ always reachable with Power + Vol Down.
 | 10 | AERA | me | Read logs: modules, touch device, battery, backlight, thermal zone3, GPU probe | fixes via `05-repack.sh` (seconds) or a rebuild (flags/code) |
 | 11 | Android | **you** | Boot Android, finish setup, set a **PIN** | needed to test decryption |
 | 12 | AERA | you + me | Enter the PIN in AERA | `twrp.all.users.decrypted=true`, /data readable |
+| 13 | AERA | me | `04-test-image.sh` summary: `wpss remoteproc`, `wlan`, `audio stage` | WPSS firmware path confirmed, wlan0 up, audio backend ready |
+| 14 | AERA | **you** | Connect to Wi-Fi in AERA; play something in AERA Media | yes/no |
 
-Steps 9–12 repeat as needed. Ramdisk-only fixes (rc files, blobs, props) never
+Steps 9–14 repeat as needed. Ramdisk-only fixes (rc files, blobs, props) never
 need a build: `tools/05-repack.sh <last image>` and flash.
