@@ -69,6 +69,20 @@ tail -f ~/aera-lexus/src-sync.log
 tools/local/build.sh           # copies this tree in, builds with a RAM-safe -j, ccache in ~/.cache
 ```
 
+### Source pinning
+
+`manifest/aera-16.0-pinned.xml` holds the exact commit of all 411 projects
+from the last known-good build. CI and `tools/local/sync.sh` use it by default,
+so both build identical source and AERA's moving branch can't break a build
+unannounced. To take AERA's updates:
+
+```bash
+SOURCE=branch tools/local/start-sync.sh          # sync the branch heads
+tools/local/build.sh                             # build and test it
+cd ~/aera-lexus/src && repo manifest -r --suppress-upstream-revision \
+  -o <tree>/manifest/aera-16.0-pinned.xml        # if good: re-pin and commit
+```
+
 ## Bring-up runbook (`tools/`)
 
 | Step | Phone state | Script | Writes to phone? |

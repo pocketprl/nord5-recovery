@@ -7,6 +7,11 @@ on:
         description: "AERA manifest branch"
         required: true
         default: "aera-16.0"
+      SOURCE:
+        description: "pinned = exact commits in manifest/aera-16.0-pinned.xml (same as local); branch = AERA's latest"
+        type: choice
+        options: [pinned, branch]
+        default: pinned
       BUILD_VARIANT:
         description: "lunch variant (eng keeps root adb for bring-up)"
         required: true
@@ -97,6 +102,12 @@ jobs:
           swapon --show
           free -h
 
+      # Before the sync: the pinned manifest lives in the device tree
+      - name: Check out device tree
+        uses: actions/checkout@v4
+        with:
+          path: device-tree
+
       # ~17 min normally. Not cacheable: ~30 GB vs the 10 GB per-repo cache limit.
       # A stuck sync (googlesource throttling shared runner IPs) fails here
       # instead of running into the 6 h job limit.
@@ -106,6 +117,14 @@ jobs:
         run: |
           repo init -u https://github.com/AERA-Recovery/android_manifest.git \
             -b ${{ inputs.MANIFEST_BRANCH }} --depth=1 --no-clone-bundle
+          if [ "${{ inputs.SOURCE }}" != "branch" ]; then
+            # Exact commits of the last known-good source (repo manifest -r)
+            cp "$GITHUB_WORKSPACE/device-tree/manifest/aera-16.0-pinned.xml" .repo/manifests/lexus-pinned.xml
+            repo init -m lexus-pinned.xml
+            echo "[*] source: pinned manifest"
+          else
+            echo "[*] source: ${{ inputs.MANIFEST_BRANCH }} branch heads"
+          fi
           # `repo list` only shows checked-out projects (0 right after init);
           # the resolved manifest has the real count (411 for aera-16.0)
           total=$(repo manifest | grep -c '<project ')
@@ -125,15 +144,10 @@ jobs:
           du -sh .
           exit $rc
 
-      - name: Check out device tree
-        uses: actions/checkout@v4
-        with:
-          path: device-tree
-
       - name: Place device tree
         run: |
           mkdir -p "/home/runner/aera/$(dirname "$DEVICE_PATH")"
-          mv device-tree "/home/runner/aera/$DEVICE_PATH"
+          mv "$GITHUB_WORKSPACE/device-tree" "/home/runner/aera/$DEVICE_PATH"
           rm -rf "/home/runner/aera/$DEVICE_PATH/.git"
 
       # Restore and save are separate so a failed build still saves its compile

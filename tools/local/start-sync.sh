@@ -18,7 +18,7 @@ act "starting aera-sync"
 systemd-run --user --unit=aera-sync --collect \
   -p Restart=on-failure -p RestartSec=60 \
   -E PATH="$HOME/.local/bin:$PATH" -E HOME="$HOME" \
-  ${SRC:+-E SRC="$SRC"} ${JOBS:+-E JOBS="$JOBS"} ${BRANCH:+-E BRANCH="$BRANCH"} \
+  ${SRC:+-E SRC="$SRC"} ${JOBS:+-E JOBS="$JOBS"} ${BRANCH:+-E BRANCH="$BRANCH"} ${SOURCE:+-E SOURCE="$SOURCE"} \
   systemd-inhibit --what=sleep:idle:handle-lid-switch --who="aera-sync" \
     --why="downloading Android source" --mode=block \
   "$here/sync.sh"

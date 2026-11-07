@@ -6,6 +6,8 @@
 #   SRC     source root          (default ~/aera-lexus/src)
 #   BRANCH  manifest branch      (default aera-16.0)
 #   JOBS    parallel fetches     (default 4; gentle on a weak connection)
+#   SOURCE  pinned (default): exact commits in manifest/aera-16.0-pinned.xml,
+#           same as CI; branch: the manifest branch heads (AERA's latest)
 #   NET_CONN NetworkManager connection to re-bring up (default: the active one)
 #   LOG     log file             (default $SRC/../src-sync.log)
 set -uo pipefail
@@ -110,6 +112,16 @@ if [ ! -d .repo/manifests ]; then
   until repo init -u https://github.com/AERA-Recovery/android_manifest.git -b "$BRANCH" --depth=1 --no-clone-bundle; do
     warn "repo init failed, retrying in 60s"; sleep 60; wait_for_net
   done
+fi
+
+TREE="$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)"
+if [ "${SOURCE:-pinned}" = "branch" ]; then
+  info "source: $BRANCH branch heads"
+  repo init -m default.xml >/dev/null
+else
+  info "source: pinned manifest (manifest/aera-16.0-pinned.xml)"
+  cp "$TREE/manifest/aera-16.0-pinned.xml" .repo/manifests/lexus-pinned.xml
+  repo init -m lexus-pinned.xml >/dev/null
 fi
 
 total=$(repo manifest 2>/dev/null | grep -c '<project ' || echo '?')
